@@ -54,25 +54,20 @@ var app = (function() {
         var canvas = document.getElementById('blueprintCanvas');
         var ctx = canvas.getContext('2d');
         
-        // Limpiar el canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         if (!points || points.length === 0) return;
         
-        // Configuración del dibujo
         ctx.strokeStyle = '#4285F4';
         ctx.lineWidth = 2;
         ctx.beginPath();
         
-        // Mover al primer punto
         ctx.moveTo(points[0].x, points[0].y);
         
-        // Dibujar líneas entre los puntos
         for (var i = 1; i < points.length; i++) {
             ctx.lineTo(points[i].x, points[i].y);
         }
         
-        // Aplicar el trazo
         ctx.stroke();
     }
 
@@ -104,15 +99,12 @@ var app = (function() {
         openBlueprint: function(author, name) {
             if (!author || !name) return;
             
-            // Mostrar mensaje de carga
             $('#blueprintTitle').text('Cargando: ' + name + '...');
             
             window.currentApi.getBlueprintsByNameAndAuthor(author, name, function(blueprint) {
                 if (blueprint && blueprint.points && blueprint.points.length > 0) {
-                    // Actualizar el título del plano
                     $('#blueprintTitle').text('Plano: ' + name + ' (' + blueprint.points.length + ' puntos)');
                     
-                    // Dibujar el plano en el canvas
                     drawBlueprint(blueprint.points);
                 } else {
                     showError("No se pudo cargar el plano o no tiene puntos: " + name);

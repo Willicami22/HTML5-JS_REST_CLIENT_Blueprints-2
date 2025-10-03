@@ -3,7 +3,6 @@
  * Maneja las llamadas a la API REST real del servicio de Blueprints
  */
 var apiclient = (function() {
-    // URL base de la API REST
     var API_BASE_URL = "http://localhost:8080/blueprints";
     
     /**
