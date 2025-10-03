@@ -1,4 +1,8 @@
-// Módulo JavaScript para la aplicación Blueprints
+
+// var api = apimock;
+var api = apiclient;
+
+
 var app = (function() {
     // Variables privadas
     var selectedAuthor = "";
@@ -46,6 +50,32 @@ var app = (function() {
         alert("Error: " + message);
     }
 
+    function drawBlueprint(points) {
+        var canvas = document.getElementById('blueprintCanvas');
+        var ctx = canvas.getContext('2d');
+        
+        // Limpiar el canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (!points || points.length === 0) return;
+        
+        // Configuración del dibujo
+        ctx.strokeStyle = '#4285F4';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        // Mover al primer punto
+        ctx.moveTo(points[0].x, points[0].y);
+        
+        // Dibujar líneas entre los puntos
+        for (var i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+        }
+        
+        // Aplicar el trazo
+        ctx.stroke();
+    }
+
     return {
         loadBlueprints: function(author) {
             if (!author) {
@@ -59,7 +89,7 @@ var app = (function() {
             var $tableBody = $("#BluePrints tbody");
             $tableBody.html('<tr><td colspan="3" class="text-center">Cargando...</td></tr>');
 
-            apimock.getBlueprintsByAuthor(author, function(blueprints) {
+            window.currentApi.getBlueprintsByAuthor(author, function(blueprints) {
                 if (blueprints && blueprints.length > 0) {
                     blueprintsList = blueprints;
                     updateBlueprintsTable(blueprints);
@@ -74,12 +104,19 @@ var app = (function() {
         openBlueprint: function(author, name) {
             if (!author || !name) return;
             
-            apimock.getBlueprintsByNameAndAuthor(author, name, function(blueprint) {
-                if (blueprint) {
-                    console.log("Mostrando plano:", blueprint);
-                    alert("Vista previa del plano: " + name + "\nPuntos: " + (blueprint.points ? blueprint.points.length : 0));
+            // Mostrar mensaje de carga
+            $('#blueprintTitle').text('Cargando: ' + name + '...');
+            
+            window.currentApi.getBlueprintsByNameAndAuthor(author, name, function(blueprint) {
+                if (blueprint && blueprint.points && blueprint.points.length > 0) {
+                    // Actualizar el título del plano
+                    $('#blueprintTitle').text('Plano: ' + name + ' (' + blueprint.points.length + ' puntos)');
+                    
+                    // Dibujar el plano en el canvas
+                    drawBlueprint(blueprint.points);
                 } else {
-                    showError("No se pudo cargar el plano: " + name);
+                    showError("No se pudo cargar el plano o no tiene puntos: " + name);
+                    $('#blueprintTitle').text('Error al cargar el plano: ' + name);
                 }
             });
         }
