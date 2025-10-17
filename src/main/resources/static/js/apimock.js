@@ -77,25 +77,68 @@ var apimock = (function() {
 	];
 
 	return {
-		getBlueprintsByAuthor: function(authname, callback) {
-			// Simular llamada asíncrona a la API real
-			setTimeout(function() {
-				callback(mockdata[authname] || []);
-			}, 500);
+		getBlueprintsByAuthor: function(authname) {
+			return new Promise(function(resolve) {
+				setTimeout(function() {
+					resolve(mockdata[authname] || []);
+				}, 300);
+			});
+		},
+		getBlueprintsByNameAndAuthor: function(authname, bpname) {
+			return new Promise(function(resolve) {
+				setTimeout(function() {
+					var authorBlueprints = mockdata[authname];
+					if (authorBlueprints) {
+						var blueprint = authorBlueprints.find(function(e) {
+							return e.name === bpname;
+						});
+						resolve(blueprint || null);
+					} else {
+						resolve(null);
+					}
+				}, 300);
+			});
+		}
+		,
+
+		createBlueprint: function(blueprint) {
+			return new Promise(function(resolve, reject) {
+				setTimeout(function() {
+					if (!blueprint || !blueprint.author || !blueprint.name) {
+						reject({ status: 400, responseText: 'Invalid blueprint' });
+						return;
+					}
+					var arr = mockdata[blueprint.author] || [];
+					// avoid duplicates: if exists, reject
+					if (arr.find(function(b) { return b.name === blueprint.name; })) {
+						reject({ status: 409, responseText: 'Blueprint already exists' });
+						return;
+					}
+					arr.push({ author: blueprint.author, name: blueprint.name, points: blueprint.points || [] });
+					mockdata[blueprint.author] = arr;
+					resolve({ status: 201 });
+				}, 300);
+			});
 		},
 
-		getBlueprintsByNameAndAuthor: function(authname, bpname, callback) {
-			setTimeout(function() {
-				var authorBlueprints = mockdata[authname];
-				if (authorBlueprints) {
-					var blueprint = authorBlueprints.find(function(e) {
-						return e.name === bpname;
-					});
-					callback(blueprint || null);
-				} else {
-					callback(null);
-				}
-			}, 500);
+		deleteBlueprint: function(author, name) {
+			return new Promise(function(resolve, reject) {
+				setTimeout(function() {
+					var arr = mockdata[author];
+					if (!arr) {
+						reject({ status: 404, responseText: 'Author not found' });
+						return;
+					}
+					var idx = arr.findIndex(function(b) { return b.name === name; });
+					if (idx === -1) {
+						reject({ status: 404, responseText: 'Blueprint not found' });
+						return;
+					}
+					arr.splice(idx, 1);
+					mockdata[author] = arr;
+					resolve({ status: 200 });
+				}, 300);
+			});
 		}
 	};
 })();

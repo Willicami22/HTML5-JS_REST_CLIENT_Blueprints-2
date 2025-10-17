@@ -74,8 +74,19 @@
     </div>
 
     <div class="panel panel-default">
-        <div class="panel-heading">
-            <h3 class="panel-title" id="blueprintTitle">Current Blueprint: None</h3>
+        <div class="panel-heading clearfix">
+            <h3 class="panel-title pull-left" id="blueprintTitle" style="padding-top: 7px;">Current Blueprint: None</h3>
+            <div class="btn-group pull-right" role="group" style="margin-left:10px;">
+                <button type="button" id="createBtn" class="btn btn-info">
+                    <span class="glyphicon glyphicon-plus"></span> Create new blueprint
+                </button>
+                <button type="button" id="deleteBtn" class="btn btn-danger" disabled>
+                    <span class="glyphicon glyphicon-trash"></span> DELETE
+                </button>
+            </div>
+            <button type="button" id="saveBtn" class="btn btn-success pull-right" disabled>
+                <span class="glyphicon glyphicon-floppy-disk"></span> Save/Update
+            </button>
         </div>
         <div class="panel-body text-center">
             <canvas id="blueprintCanvas" width="800" height="400"
