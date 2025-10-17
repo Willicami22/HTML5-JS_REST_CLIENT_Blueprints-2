@@ -66,6 +66,24 @@ var app = (function() {
         }, 3000);
     }
 
+    function parseAjaxError(err) {
+        // err may be: a string, an Error object, a jqXHR, or jQuery fail args
+        try {
+            if (!err) return 'Error desconocido';
+            if (typeof err === 'string') return err;
+            if (err.responseText) return err.responseText;
+            if (err.statusText) return err.statusText;
+            // jQuery sometimes passes (jqXHR, textStatus, errorThrown) as multiple args;
+            // if someone forwarded an array-like object, try to extract
+            if (err.length && typeof err[1] === 'string') return err[1];
+            if (err.errorThrown) return err.errorThrown;
+            if (err.message) return err.message;
+            return JSON.stringify(err);
+        } catch (e) {
+            return 'Error desconocido';
+        }
+    }
+
     function drawBlueprint(points) {
         var canvas = document.getElementById('blueprintCanvas');
         var ctx = canvas.getContext('2d');
@@ -184,7 +202,8 @@ var app = (function() {
                 })
                 .catch(function(error) {
                     console.error("Error al obtener blueprints:", error);
-                    $tableBody.html('<tr><td colspan="3" class="text-center">Error al cargar los planos</td></tr>');
+                    var msg = parseAjaxError(error);
+                    $tableBody.html('<tr><td colspan="3" class="text-center">Error al cargar los planos: ' + msg + '</td></tr>');
                     $("#totalPoints").text("0");
                 });
         },
@@ -211,8 +230,9 @@ var app = (function() {
                         
                         drawBlueprint(currentBlueprint.points);
                         
-                        // Habilitar el botón Save cuando se abre un blueprint
+                        // Habilitar el botón Save y DELETE cuando se abre un blueprint existente
                         enableSaveButton();
+                        $('#deleteBtn').prop('disabled', false);
                     } else {
                         showError("No se pudo cargar el plano: " + name);
                         $('#blueprintTitle').text('Error al cargar el plano: ' + name);
@@ -221,7 +241,8 @@ var app = (function() {
                 })
                 .catch(function(error) {
                     console.error("Error al obtener el blueprint:", error);
-                    showError("No se pudo cargar el plano: " + name);
+                    var msg = parseAjaxError(error);
+                    showError("No se pudo cargar el plano: " + name + ' - ' + msg);
                     $('#blueprintTitle').text('Error al cargar el plano: ' + name);
                     disableSaveButton();
                 });
@@ -244,36 +265,36 @@ var app = (function() {
             var $saveBtn = $('#saveBtn');
             $saveBtn.prop('disabled', true).html('<span class="glyphicon glyphicon-refresh glyphicon-spin"></span> Guardando...');
 
-            // Usar promesas para ejecutar las operaciones en orden
-            // 1. Hacer PUT al API con el plano actualizado (se asume que el recurso ya existe)
-            window.currentApi.updateBlueprint(author, name, currentBlueprint)
-                .then(function(response) {
-                    console.log("Blueprint actualizado exitosamente en el servidor");
-                    
-                    // 2. Hacer GET al recurso /blueprints/{author} para obtener los planos del autor
+            // Decide whether to POST (create) or PUT (update) based on isNew flag
+            var opPromise;
+            if (currentBlueprint.isNew) {
+                opPromise = window.currentApi.createBlueprint(currentBlueprint);
+            } else {
+                opPromise = window.currentApi.updateBlueprint(author, name, currentBlueprint);
+            }
+ 
+            opPromise
+                .then(function() {
+                    // If it was a creation, clear the isNew flag so future saves do PUT
+                    if (currentBlueprint.isNew) currentBlueprint.isNew = false;
+                    // Refresh the author's blueprint list
                     return window.currentApi.getBlueprintsByAuthor(author);
                 })
                 .then(function(blueprints) {
-                    console.log("Blueprints recargados del servidor");
-                    
                     if (blueprints && blueprints.length > 0) {
                         blueprintsList = blueprints;
                         updateBlueprintsTable(blueprints);
-                        
-                        // 3. Calcular nuevamente los puntos totales del usuario
                         updateTotalPoints(blueprints);
                     }
-                    
                     showSuccess("Blueprint guardado exitosamente");
-                    
-                    // Rehabilitar el botón
                     $saveBtn.prop('disabled', false).html('<span class="glyphicon glyphicon-floppy-disk"></span> Save/Update');
+                    // enable delete now that it's persisted
+                    $('#deleteBtn').prop('disabled', false);
                 })
                 .catch(function(error) {
                     console.error("Error en el proceso de guardado:", error);
-                    showError("Error al guardar el blueprint: " + (error.responseText || error.statusText || "Error desconocido"));
-                    
-                    // Rehabilitar el botón
+                    var msg = parseAjaxError(error);
+                    showError("Error al guardar el blueprint: " + msg);
                     $saveBtn.prop('disabled', false).html('<span class="glyphicon glyphicon-floppy-disk"></span> Save/Update');
                 });
         },
@@ -296,26 +317,13 @@ var app = (function() {
             var ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            currentBlueprint = { author: author, name: name, points: [] };
+            // Mark the blueprint as new (not yet persisted). The actual POST will happen on Save.
+            currentBlueprint = { author: author, name: name, points: [], isNew: true };
             $('#blueprintTitle').text('Plano: ' + name + ' (0 puntos)');
             enableSaveButton();
-            $('#deleteBtn').prop('disabled', false);
-
-            // Create on the server, then refresh list and points using promises
-            window.currentApi.createBlueprint(currentBlueprint)
-                .then(function() {
-                    return window.currentApi.getBlueprintsByAuthor(author);
-                })
-                .then(function(blueprints) {
-                    blueprintsList = blueprints;
-                    updateBlueprintsTable(blueprints);
-                    updateTotalPoints(blueprints);
-                    showSuccess('Blueprint creado exitosamente');
-                })
-                .catch(function(err) {
-                    console.error('Error creando blueprint:', err);
-                    showError('No se pudo crear el blueprint: ' + (err.responseText || err.statusText || 'Error desconocido'));
-                });
+            // Keep DELETE disabled until the blueprint is persisted (or an existing one is opened)
+            $('#deleteBtn').prop('disabled', true);
+            showSuccess('Plano listo para crear. Presione Save/Update para persistirlo.');
         },
 
         deleteCurrentBlueprint: function() {
@@ -349,7 +357,8 @@ var app = (function() {
                 })
                 .catch(function(err) {
                     console.error('Error eliminando blueprint:', err);
-                    showError('No se pudo eliminar el blueprint: ' + (err.responseText || err.statusText || 'Error desconocido'));
+                    var msg = parseAjaxError(err);
+                    showError('No se pudo eliminar el blueprint: ' + msg);
                 });
         },
 

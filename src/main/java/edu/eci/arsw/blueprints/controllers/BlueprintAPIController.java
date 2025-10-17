@@ -10,11 +10,13 @@ import java.util.Set;
 import edu.eci.arsw.blueprints.model.Blueprint;
 import edu.eci.arsw.blueprints.services.BlueprintsServices;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PutMapping;
 
@@ -24,7 +26,8 @@ import org.springframework.web.bind.annotation.PutMapping;
  */
 
 @RestController
-@RequestMapping(value = "/blueprints")
+@CrossOrigin(origins = "*")
+@RequestMapping(value = "/blueprints", produces = MediaType.APPLICATION_JSON_VALUE)
 public class BlueprintAPIController {
 
     @Autowired
@@ -34,9 +37,10 @@ public class BlueprintAPIController {
     public ResponseEntity<?> getAllBlueprints() {
         try {
             Set<Blueprint> data = blueprintsServices.getAllBlueprints();
-            return new ResponseEntity<>(data, HttpStatus.ACCEPTED);
+            return new ResponseEntity<>(data, HttpStatus.OK);
         } catch (Exception ex) {
-            return new ResponseEntity<>("Error al obtener los planos", HttpStatus.NOT_FOUND);
+            Logger.getLogger(BlueprintAPIController.class.getName()).log(Level.SEVERE, null, ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", ex.getMessage()));
         }
     }
 
@@ -47,9 +51,10 @@ public class BlueprintAPIController {
             if (data == null || data.isEmpty()) {
                 return new ResponseEntity<>("No se encontraron planos para: " + author, HttpStatus.NOT_FOUND);
             }
-            return new ResponseEntity<>(data, HttpStatus.ACCEPTED);
+            return new ResponseEntity<>(data, HttpStatus.OK);
         } catch (Exception ex) {
-            return new ResponseEntity<>("Error al obtener los planos", HttpStatus.NOT_FOUND);
+            Logger.getLogger(BlueprintAPIController.class.getName()).log(Level.SEVERE, null, ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", ex.getMessage()));
         }
     }
 
@@ -60,9 +65,10 @@ public class BlueprintAPIController {
             if (data == null ) {
                 return new ResponseEntity<>("No se encontraron planos para: " + author, HttpStatus.NOT_FOUND);
             }
-            return new ResponseEntity<>(data, HttpStatus.ACCEPTED);
+            return new ResponseEntity<>(data, HttpStatus.OK);
         } catch (Exception ex) {
-            return new ResponseEntity<>("Error al obtener los planos", HttpStatus.NOT_FOUND);
+            Logger.getLogger(BlueprintAPIController.class.getName()).log(Level.SEVERE, null, ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", ex.getMessage()));
         }
     }
 
@@ -73,7 +79,7 @@ public class BlueprintAPIController {
             return new ResponseEntity<>(HttpStatus.CREATED);
         } catch (Exception ex) {
             Logger.getLogger(BlueprintAPIController.class.getName()).log(Level.SEVERE, null, ex);
-            return new ResponseEntity<>("Error al crear el plano",HttpStatus.FORBIDDEN);
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
         }
 
     }
@@ -95,7 +101,7 @@ public class BlueprintAPIController {
             
         } catch (Exception ex) {
             Logger.getLogger(BlueprintAPIController.class.getName()).log(Level.SEVERE, null, ex);
-            return new ResponseEntity<>("Plano no encontrado: " + author + "/" + name, HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
         }
     }
 
